@@ -4,7 +4,6 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import javax.inject.Inject;
-
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
 import net.runelite.api.Perspective;
@@ -15,15 +14,19 @@ import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayPriority;
 import net.runelite.client.ui.overlay.OverlayUtil;
 
-public class CiwaScapeNpcOverlay extends Overlay
+public class NpcTagOverlay extends Overlay
 {
     @Inject private Client client;
-    private final CiwaScapePlugin plugin;
+
+    // Not injected; plugin sets this after constructing QuestEngine
+    private QuestEngine questEngine;
+
+    public void setQuestEngine(QuestEngine engine) {
+        this.questEngine = engine;
+    }
 
     @Inject
-    public CiwaScapeNpcOverlay(CiwaScapePlugin plugin)
-    {
-        this.plugin = plugin;
+    public NpcTagOverlay() {
         setPosition(OverlayPosition.DYNAMIC);
         setLayer(OverlayLayer.ABOVE_SCENE);
         setPriority(OverlayPriority.MED);
@@ -32,23 +35,21 @@ public class CiwaScapeNpcOverlay extends Overlay
     @Override
     public Dimension render(Graphics2D g)
     {
-        if (client.getNpcs() == null) return null;
+        if (questEngine == null || client.getNpcs() == null) return null;
 
         for (NPC npc : client.getNpcs())
         {
             if (npc == null) continue;
-
-            String assigned = plugin.getAssignedName(npc);
-            if (assigned == null) continue;
+            String label = questEngine.overlayLabelFor(npc);
+            if (label == null) continue;
 
             LocalPoint lp = npc.getLocalLocation();
             if (lp == null) continue;
 
-            var textLoc = Perspective.localToCanvas(
-                    plugin.getClient(), lp, plugin.getClient().getPlane(), npc.getLogicalHeight() + 20);
-            if (textLoc == null) continue;
+            var p = Perspective.localToCanvas(client, lp, client.getPlane(), npc.getLogicalHeight() + 20);
+            if (p == null) continue;
 
-            OverlayUtil.renderTextLocation(g, textLoc, assigned, Color.CYAN);
+            OverlayUtil.renderTextLocation(g, p, label, Color.CYAN);
         }
         return null;
     }
